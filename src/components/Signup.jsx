@@ -42,7 +42,7 @@ const Signup = () => {
   };
   
   return (
-    <div className="max-w-md mx-auto p-6 bg-gray-50">
+    <div className="max-w-md mx-auto p-6 bg-gray-50 lg:mt-16 md:mt-12">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Create your</h1>
         <h1 className="text-4xl font-bold text-gray-900">PopX account</h1>
