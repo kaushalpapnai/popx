@@ -16,9 +16,9 @@ function App() {
   const dispatch = useDispatch();
   const user = useSelector((store) => store.user.user);
   const [loading, setLoading] = useState(true);
-
+  
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768);
-
+  
   useEffect(() => {
     const handleResize = () => {
       setIsSmallScreen(window.innerWidth < 768);
@@ -26,7 +26,7 @@ function App() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
+  
   // Check the user's session on app load
   useEffect(() => {
     const fetchUser = async (session = null) => {
@@ -74,24 +74,24 @@ function App() {
         setLoading(false);
       }
     };
-
+    
     // Initial Fetch
     fetchUser();
-
+    
     // Listen for authentication state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         fetchUser(session);
       }
     );
-
+    
     // Cleanup function to unsubscribe from auth listener
     return () => {
       authListener?.subscription?.unsubscribe();
     };
   }, [dispatch]);
-
-  // Create router with protected routes
+  
+  // Create router with protected routes - Re-create when auth state changes
   const router = createBrowserRouter([
     {
       path: "/",
@@ -110,12 +110,12 @@ function App() {
       element: user ? <Profile /> : <Navigate to="/login" />,
     },
   ]);
-
+  
   if (loading) {
     return <div>Loading...</div>; // Show a loading indicator while fetching user data
   }
-
-  return <RouterProvider router={router} />;
+  
+  return <RouterProvider router={router} key={user ? 'authenticated' : 'unauthenticated'} />;
 }
 
 export default App;
