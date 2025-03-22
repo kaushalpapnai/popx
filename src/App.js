@@ -15,11 +15,23 @@ import Profile from "./components/Profile.jsx";
 import Login from "./components/Login.jsx";
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient.js";
+import { useDispatch, useSelector } from "react-redux";
+import { addUser, removeUser } from "./store/userSlice.js";
 
 function App() {
-  // const dispatch = useDispatch();
-  // const user = useSelector((store) => store.user.user);
+  const dispatch = useDispatch();
+  const user = useSelector((store) => store.user.user);
   const [loading, setLoading] = useState(true);
+
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Check the user's session on app load
   useEffect(() => {
@@ -32,19 +44,28 @@ function App() {
           ? { data: { user: sessionUser } }
           : await supabase.auth.getUser();
 
+        if (!loggedInUser) {
+          dispatch(removeUser());
+          setLoading(false);
+          return;
+        }
+
         // Fetch public user details from the database
         const { data: userDetails, error } = await supabase
-          .from("User") // Adjust to match your actual table name
+          .from("user") // Adjust to match your actual table name
           .select("*")
           .eq("id", loggedInUser.id)
           .single();
 
         if (error) {
           console.error("Error fetching user details:", error);
+          dispatch(removeUser());
         } else if (userDetails) {
+          dispatch(addUser(userDetails));
         }
       } catch (err) {
         console.error("Unexpected error fetching user:", err);
+        dispatch(removeUser());
       } finally {
         setLoading(false);
       }
@@ -67,7 +88,7 @@ function App() {
   }, [dispatch]);
 
   if (loading) {
-    return <div>Loading...</div>; // Showing a loading indicator while fetching user data
+    return <div>Loading...</div>; // Show a loading indicator while fetching user data
   }
 
   const router = createBrowserRouter([
