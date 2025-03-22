@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+
 
 const Login = () => {
   const { register, handleSubmit, formState: { errors }, watch } = useForm();
   const [showPassword, setShowPassword] = useState(false);
   const [isFormFilled, setIsFormFilled] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const navigate = useNavigate();
   
   const email = watch('email');
   const password = watch('password');
@@ -18,9 +24,29 @@ const Login = () => {
     }
   }, [email, password]);
 
-  const onSubmit = (data) => {
-    console.log(data);
-    // Handle login logic here
+  const onSubmit = async (data) => {
+    setIsSubmitting(true);
+    setLoginError('');
+    
+    try {
+      // Authenticate with Supabase
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (error) throw error;
+      
+      console.log('Login successful:', authData);
+      
+      // Navigate to profile page after successful login
+      navigate('/profile');
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError(error.message || 'Failed to login. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -34,6 +60,12 @@ const Login = () => {
         Lorem ipsum dolor sit amet, consectetur adipiscing elit.
       </p>
       
+      {loginError && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+          {loginError}
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="mb-4 relative">
           <label htmlFor="email" className="absolute -top-2 rounded-full left-4 px-1 bg-white text-purple-600 text-sm">
@@ -45,6 +77,7 @@ const Login = () => {
             placeholder="Enter email address"
             className="w-full p-3 border border-gray-300 rounded-lg text-gray-500"
             {...register('email', { required: true })}
+            disabled={isSubmitting}
           />
           {errors.email && <span className="text-red-500 text-sm">Email is required</span>}
         </div>
@@ -59,12 +92,14 @@ const Login = () => {
             placeholder="Enter password"
             className="w-full p-3 border border-gray-300 rounded-lg text-gray-500"
             {...register('password', { required: true })}
+            disabled={isSubmitting}
           />
-          <button 
+          <button
             type="button"
             className="absolute right-3 top-3 text-gray-500"
             onClick={togglePasswordVisibility}
             aria-label={showPassword ? "Hide password" : "Show password"}
+            disabled={isSubmitting}
           >
             {showPassword ? (
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -84,10 +119,11 @@ const Login = () => {
         <button
           type="submit"
           className={`w-full p-4 rounded-lg font-medium ${
-            isFormFilled ? 'bg-purple-600 text-white' : 'bg-gray-300 text-white'
+            isFormFilled && !isSubmitting ? 'bg-purple-600 text-white' : 'bg-gray-300 text-white'
           }`}
+          disabled={!isFormFilled || isSubmitting}
         >
-          Login
+          {isSubmitting ? 'Logging in...' : 'Login'}
         </button>
       </form>
     </div>

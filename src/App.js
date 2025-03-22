@@ -1,14 +1,8 @@
-
 import {
   createBrowserRouter,
   Navigate,
   RouterProvider,
 } from "react-router-dom";
-//import StartUpDetails from "./componets/StartUpDetails.jsx";
-// import { useDispatch, useSelector } from "react-redux";
-// import { supabase } from "./supabaseClient.js"; // import supabase instance
-// import { useEffect, useState } from "react";
-// import { addUser, removeUser } from "./componets/store/slices/userSlice.js";
 import Signup from "./components/Signup.jsx";
 import LandingPage from "./components/LandingPage.jsx";
 import Profile from "./components/Profile.jsx";
@@ -35,34 +29,44 @@ function App() {
 
   // Check the user's session on app load
   useEffect(() => {
-    const fetchUser = async (sessionUser = null) => {
+    const fetchUser = async (session = null) => {
       try {
-        // Get authenticated user if not provided
-        const {
-          data: { user: loggedInUser },
-        } = sessionUser
-          ? { data: { user: sessionUser } }
-          : await supabase.auth.getUser();
-
-        if (!loggedInUser) {
+        // If no session provided, get the current session
+        if (!session) {
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+          
+          if (sessionError) {
+            console.error("Error fetching session:", sessionError);
+            dispatch(removeUser());
+            setLoading(false);
+            return;
+          }
+          
+          session = sessionData.session;
+        }
+        
+        // If no session or user, remove user from store
+        if (!session || !session.user) {
           dispatch(removeUser());
           setLoading(false);
           return;
         }
-
-        // Fetch public user details from the database
-        const { data: userDetails, error } = await supabase
-          .from("user") // Adjust to match your actual table name
-          .select("*")
-          .eq("id", loggedInUser.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching user details:", error);
-          dispatch(removeUser());
-        } else if (userDetails) {
-          dispatch(addUser(userDetails));
-        }
+        
+        // Use the auth user data directly
+        const userData = {
+          id: session.user.id,
+          email: session.user.email,
+          // Other useful properties from the auth user
+          phone: session.user.phone,
+          created_at: session.user.created_at,
+          last_sign_in_at: session.user.last_sign_in_at,
+          app_metadata: session.user.app_metadata,
+          user_metadata: session.user.user_metadata,
+          // Include any custom user_metadata fields that might be set during signup
+          ...session.user.user_metadata
+        };
+        
+        dispatch(addUser(userData));
       } catch (err) {
         console.error("Unexpected error fetching user:", err);
         dispatch(removeUser());
@@ -77,7 +81,7 @@ function App() {
     // Listen for authentication state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        fetchUser(session?.user || null);
+        fetchUser(session);
       }
     );
 
@@ -87,10 +91,7 @@ function App() {
     };
   }, [dispatch]);
 
-  if (loading) {
-    return <div>Loading...</div>; // Show a loading indicator while fetching user data
-  }
-
+  // Create router with protected routes
   const router = createBrowserRouter([
     {
       path: "/",
@@ -98,18 +99,21 @@ function App() {
     },
     {
       path: "/signup",
-      element: <Signup />,
+      element: user ? <Navigate to="/profile" /> : <Signup />,
     },
     {
       path: "/login",
-      element: <Login />,
+      element: user ? <Navigate to="/profile" /> : <Login />,
     },
     {
       path: "/profile",
-      element: <Profile />,
+      element: user ? <Profile /> : <Navigate to="/login" />,
     },
-    
   ]);
+
+  if (loading) {
+    return <div>Loading...</div>; // Show a loading indicator while fetching user data
+  }
 
   return <RouterProvider router={router} />;
 }
