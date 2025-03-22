@@ -54,7 +54,7 @@ const Login = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 mt-48">
+    <div className="max-w-md mx-auto p-6 mt-20">
       <h1 className="text-3xl font-bold mb-2">Signin to your PopX account</h1>
       <p className="text-gray-500 mb-6">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit.
